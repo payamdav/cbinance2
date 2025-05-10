@@ -36,4 +36,5 @@ class TradeReader {
         Trade read_first();
         Trade read_last();
         size_t search(size_t t);
+        void pubsub_trades(size_t t1=0, size_t t2=0);
 };

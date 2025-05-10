@@ -2,6 +2,9 @@
 #include <fstream>
 #include "../../config.hpp"
 #include "../utils/file_utils.hpp"
+#include "../core/pubsub/pubsub.hpp"
+#include <iostream>
+
 
 using namespace std;
 
@@ -102,3 +105,18 @@ void TradeReader::next(Trade &trade) {
     trade_data.read(reinterpret_cast<char*>(&trade), sizeof(Trade)); // Read the next trade
 }
 
+void TradeReader::pubsub_trades(size_t t1, size_t t2) {
+    size_t start_index = t1 == 0 ? 0 : search(t1); // Find the starting index for the given timestamp
+    size_t end_index = t2 == 0 ? count - 1 : search(t2); // Find the ending index for the given timestamp
+    // cout << "Publishing trades from index " << start_index << " to " << end_index << endl;
+    Trade trade;
+    PubSub & pubsub = PubSub::getInstance(); // Get the instance of the PubSub class
+    set_file_cursor(start_index); // Set the file cursor to the starting index
+    size_t trade_count = end_index - start_index + 1; // Calculate the number of trades to publish
+    while (trade_count--) {
+        next(trade); // Read the next trade
+        pubsub.publish("trade", &trade); // Publish the trade data
+    }
+    // cout << "Published trades from index " << start_index << " to " << end_index << endl;
+    pubsub.publish("trade_finished", nullptr); // Publish a null trade to indicate the end of the stream
+}
