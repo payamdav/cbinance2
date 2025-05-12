@@ -7,6 +7,7 @@
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/market/market.hpp"
 #include "../../../libs/ta/zigzag/zigzag.hpp"
+#include "../../../libs/trade/tradecache.hpp"
 
 
 using namespace std;
@@ -122,9 +123,32 @@ void test5() {
     timer.checkpoint("Finished reading trades");
 }
 
+void test6() {
+    string symbol = "btcusdt";
+
+    Market * market1 = (new Market("Market1"))->set_price_multiplier_to_handle_orders(0.0001)->set_commision(10)->subscribe_to_pubsub();
+    TradeCache * trade_cache = &TradeCache::getInstance();
+
+    TradeReader trade_reader(symbol);
+    utils::Timer timer;
+    trade_reader.pubsub_trades();
+    timer.checkpoint("Finished reading trades");
+
+    cout << "TradeCache size: " << trade_cache->cache.size() << endl;
+    cout << "TradeCache capacity: " << trade_cache->cache.capacity() << endl;
+    cout << "TradeCache first trade: " << trade_cache->cache.front() << endl;
+    cout << "TradeCache last trade: " << trade_cache->cache.back() << endl;
+    cout << "TradeCache duration: " << (trade_cache->cache.back().t - trade_cache->cache.front().t) / (1000 * 60 * 60) << endl;
+    cout << "TradeCache full duration in hours: " << trade_cache->get_full_duration_in_hours() << endl;
+    cout << "TradeCache Memory Used: " << (trade_cache->cache.size() * sizeof(Trade)) / (1024 * 1024) << " MB" << endl;
+    cout << "TradeCache Memory Used: " << trade_cache->get_memory_used_in_mb() << " MB" << endl;
+    cout << "-------------------------" << endl;
+    trade_cache->print_average_counts();
+}
+
 
 int main() {
-    test5();
+    test6();
     return 0;
 }
 
