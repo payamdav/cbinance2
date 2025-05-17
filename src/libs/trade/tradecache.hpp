@@ -2,6 +2,7 @@
 #include <boost/circular_buffer.hpp>
 #include "trade.hpp"
 #include "../core/pubsub/pubsub.hpp"
+#include <vector>
 
 
 class TradeCache {
@@ -41,6 +42,41 @@ class TradeCache {
         boost::circular_buffer<boost::circular_buffer<Trade>::iterator> hours_index;
 
         static TradeCache& getInstance();
+        boost::circular_buffer<boost::circular_buffer<Trade>::iterator>& get_index(size_t miliseconds);
+        void push(Trade& trade);
+
+        size_t get_full_duration_in_hours();
+        size_t get_memory_used_in_mb();
+        size_t average_count(boost::circular_buffer<boost::circular_buffer<Trade>::iterator> & buf);
+        void print_average_counts();
+};
+
+
+class TradeCache2 {
+    private:
+        size_t first_trade_ts = 0;
+        size_t last_trade_ts = 0;
+
+        PubSub& pubsub = PubSub::getInstance();
+
+        TradeCache2(size_t size=10000000);
+        TradeCache2(const TradeCache2&) = delete;
+        TradeCache2& operator=(const TradeCache2&) = delete;
+        TradeCache2(TradeCache2&&) = delete;
+        TradeCache2& operator=(TradeCache2&&) = delete;
+
+        std::vector<size_t> milis;
+        std::vector<size_t> sizes;
+        std::vector<size_t> current_numbers;
+        std::vector<boost::circular_buffer<boost::circular_buffer<Trade>::iterator>> indexes;
+
+    public:
+        boost::circular_buffer<Trade> cache;
+
+        static TradeCache2& getInstance();
+        static TradeCache2* getInstanceP();
+        TradeCache2* add_index(size_t miliseconds, size_t size);
+        boost::circular_buffer<boost::circular_buffer<Trade>::iterator>& get_index(size_t miliseconds);
         void push(Trade& trade);
 
         size_t get_full_duration_in_hours();
