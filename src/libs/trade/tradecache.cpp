@@ -19,12 +19,15 @@ TradeCache::TradeCache(size_t size) {
     this->thirty_minutes_index = boost::circular_buffer<boost::circular_buffer<Trade>::iterator>(2 * 24);
     this->hours_index = boost::circular_buffer<boost::circular_buffer<Trade>::iterator>(24);
 
-    pubsub.subscribe("trade", [this](void* data) { Trade* trade = static_cast<Trade*>(data); this->push(*trade); });
 }
 
 TradeCache& TradeCache::getInstance() {
     static TradeCache instance;
     return instance;
+}
+
+void TradeCache::subscribe_to_pubsub() {
+    pubsub.subscribe("trade", [this](void* data) { Trade* trade = static_cast<Trade*>(data); this->push(*trade); });
 }
 
 void TradeCache::push(Trade& trade) {
@@ -182,6 +185,33 @@ void TradeCache::print_average_counts() {
     std::cout << "Hours: " << average_count(hours_index) << std::endl;
 }
 
+void TradeCache::reset() {
+    this->cache.clear();
+
+    this->seconds_index.clear();
+    this->five_seconds_index.clear();
+    this->ten_seconds_index.clear();
+    this->thirty_seconds_index.clear();
+    this->minutes_index.clear();
+    this->five_minutes_index.clear();
+    this->ten_minutes_index.clear();
+    this->thirty_minutes_index.clear();
+    this->hours_index.clear();
+
+    first_trade_ts = 0;
+    last_trade_ts = 0;
+
+    seconds_number = 0;
+    five_seconds_number = 0;
+    ten_seconds_number = 0;
+    thirty_seconds_number = 0;
+    minutes_number = 0;
+    five_minutes_number = 0;
+    ten_minutes_number = 0;
+    thirty_minutes_number = 0;
+    hours_number = 0;
+    
+}
 
 
 // Tradecache2 Implementation

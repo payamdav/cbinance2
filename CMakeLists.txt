@@ -27,6 +27,7 @@ add_subdirectory(src/libs/market)
 # add_subdirectory(src/scripts/trades)
 # add_subdirectory(src/scripts/chart_data)
 add_subdirectory(src/scripts/tests)
+add_subdirectory(src/scripts/market_anal)
 
 
 

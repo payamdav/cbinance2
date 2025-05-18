@@ -42,6 +42,7 @@ class TradeCache {
         boost::circular_buffer<boost::circular_buffer<Trade>::iterator> hours_index;
 
         static TradeCache& getInstance();
+        void subscribe_to_pubsub();
         boost::circular_buffer<boost::circular_buffer<Trade>::iterator>& get_index(size_t miliseconds);
         void push(Trade& trade);
 
@@ -49,6 +50,7 @@ class TradeCache {
         size_t get_memory_used_in_mb();
         size_t average_count(boost::circular_buffer<boost::circular_buffer<Trade>::iterator> & buf);
         void print_average_counts();
+        void reset();
 };
 
 

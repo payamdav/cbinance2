@@ -22,4 +22,5 @@ class PubSub {
     public:
         void subscribe(const std::string& topic, Callback callback);
         void publish(const std::string& topic, void* data);
+        void reset();
 };

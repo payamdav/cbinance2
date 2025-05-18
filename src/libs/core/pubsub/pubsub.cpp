@@ -20,3 +20,6 @@ void PubSub::publish(const std::string& topic, void* data) {
     }
 }
 
+void PubSub::reset() {
+    subscribers.clear();
+}
