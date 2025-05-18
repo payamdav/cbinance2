@@ -8,6 +8,7 @@
 
 class Frame {
     public:
+        size_t t=0;
         double h=0;
         double l=0;
         double vwap=0;

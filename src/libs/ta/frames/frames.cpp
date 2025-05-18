@@ -19,12 +19,14 @@ void Frames::new_slot() {
     auto index = trade_cache.get_index(miliseconds);
     frame.n = std::distance(*(index.end() - 2), *(index.end() - 1));
     if (frame.n == 0) {
+        frame.t = this->back().t + miliseconds;
         frame.vwap = this->back().vwap;
         frame.h = this->back().vwap;
         frame.l = this->back().vwap;
     } else {
         frame.h = (*(index.end() - 2))->p;
         frame.l = (*(index.end() - 2))->p;
+        frame.t = (((size_t)((*(index.end() - 2))->t / miliseconds)) * miliseconds) + miliseconds;
         for ( auto it = *(index.end() -2); it != *(index.end() - 1); ++it) {
             frame.v += it->v;
             frame.q += it->q;
@@ -36,6 +38,9 @@ void Frames::new_slot() {
             }
         }
         frame.vwap = frame.q / frame.v;
+    }
+    if (this->size() > 0 && this->back().t+miliseconds != frame.t) {
+        cout << "Frames::new_slot() - Error: Frame time mismatch. Expected: " << this->back().t+miliseconds << ", Got: " << frame.t << std::endl;
     }
     this->push_back(frame);
     pubsub.publish("frame_" + std::to_string(miliseconds), &this->back());

@@ -2,6 +2,8 @@
 #include <boost/circular_buffer.hpp>
 #include <string>
 #include "../../core/pubsub/pubsub.hpp"
+#include <iostream>
+
 
 class Zig {
     public:
@@ -11,6 +13,8 @@ class Zig {
 
         Zig(size_t t = 0, double p = 0, bool h = false);
 };
+
+std::ostream& operator<<(std::ostream& os, const Zig& zig);
 
 class ZigZag : public boost::circular_buffer<Zig> {
     private:
@@ -31,6 +35,7 @@ class ZigZag : public boost::circular_buffer<Zig> {
 
         void push(size_t t, double p);
         ZigZag * subscribe_to_pubsub();
+        ZigZag * subscribe_to_pubsub_frames_vwap(size_t miliseconds);
         ZigZag * set_publish_appends(std::string topic = "zigzag_append");
         ZigZag * set_publish_updates(std::string topic = "zigzag_update");
 };

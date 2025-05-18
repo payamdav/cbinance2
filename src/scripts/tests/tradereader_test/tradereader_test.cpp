@@ -8,6 +8,7 @@
 #include "../../../libs/core/pubsub/pubsub.hpp"
 #include "../../../libs/market/market.hpp"
 #include "../../../libs/ta/zigzag/zigzag.hpp"
+#include "../../../libs/ta/stepper/stepper.hpp"
 #include "../../../libs/trade/tradecache.hpp"
 #include "../../../libs/ta/frames/frames.hpp"
 #include <numeric>
@@ -214,10 +215,82 @@ void test8() {
     cout << "FS Count n==0 : " << std::count_if(fs.begin(), fs.end(), [](const Frame& frame) { return frame.n == 0; }) << endl;
     
 
+}
+
+void test9() {
+    string symbol = "btcusdt";
+
+    TradeCache& trade_cache = TradeCache::getInstance();
+    Frames fh(1000, 3600000);
+    Frames fm(60000, 60000);
+    ZigZag * zigzag_h = (new ZigZag(0.01, 100000))->set_publish_appends("zigzag_append")->subscribe_to_pubsub_frames_vwap(3600000);
+    ZigZag * zigzag_m = (new ZigZag(0.01, 100000))->set_publish_appends("zigzag_append")->subscribe_to_pubsub_frames_vwap(60000);
+
+    TradeReader trade_reader(symbol);
+    utils::Timer timer;
+    trade_reader.pubsub_trades();
+    timer.checkpoint("Finished reading trades");
+
+    cout << "zigzag_h size: " << zigzag_h->size() << endl;
+    cout << "zigzag_h capacity: " << zigzag_h->capacity() << endl;
+    cout << "zigzag_h first zig: " << zigzag_h->front() << endl;
+    cout << "zigzag_h last zig: " << zigzag_h->back() << endl;
+
+    cout << "---------------------------" << endl;
+
+    cout << "zigzag_m size: " << zigzag_m->size() << endl;
+    cout << "zigzag_m capacity: " << zigzag_m->capacity() << endl;
+    cout << "zigzag_m first zig: " << zigzag_m->front() << endl;
+    cout << "zigzag_m last zig: " << zigzag_m->back() << endl;
+    
+
  }
 
+void test10() {
+    string symbol = "btcusdt";
+
+    TradeCache& trade_cache = TradeCache::getInstance();
+    Frames fh(1000, 3600000);
+    Frames fm(60000, 60000);
+    ZigZag * zigzag_h = (new ZigZag(0.01, 100000))->set_publish_appends("zigzag_append")->subscribe_to_pubsub_frames_vwap(3600000);
+    ZigZag * zigzag_m = (new ZigZag(0.01, 100000))->set_publish_appends("zigzag_append")->subscribe_to_pubsub_frames_vwap(60000);
+    Stepper * stepper_h = (new Stepper(0.01, 100000))->set_publish_appends("stepper_append")->subscribe_to_pubsub_frames_vwap(3600000);
+    Stepper * stepper_m = (new Stepper(0.01, 100000))->set_publish_appends("stepper_append")->subscribe_to_pubsub_frames_vwap(60000);
+
+    TradeReader trade_reader(symbol);
+    utils::Timer timer;
+    trade_reader.pubsub_trades();
+    timer.checkpoint("Finished reading trades");
+
+    cout << "zigzag_h size: " << zigzag_h->size() << endl;
+    cout << "zigzag_h capacity: " << zigzag_h->capacity() << endl;
+    cout << "zigzag_h first zig: " << zigzag_h->front() << endl;
+    cout << "zigzag_h last zig: " << zigzag_h->back() << endl;
+
+    cout << "---------------------------" << endl;
+
+    cout << "zigzag_m size: " << zigzag_m->size() << endl;
+    cout << "zigzag_m capacity: " << zigzag_m->capacity() << endl;
+    cout << "zigzag_m first zig: " << zigzag_m->front() << endl;
+    cout << "zigzag_m last zig: " << zigzag_m->back() << endl;
+    
+    cout << "---------------------------" << endl;
+
+    cout << "stepper_h size: " << stepper_h->size() << endl;
+    cout << "stepper_h capacity: " << stepper_h->capacity() << endl;
+    cout << "stepper_h first step: " << stepper_h->front() << endl;
+    cout << "stepper_h last step: " << stepper_h->back() << endl;
+    cout << "---------------------------" << endl;
+    cout << "stepper_m size: " << stepper_m->size() << endl;
+    cout << "stepper_m capacity: " << stepper_m->capacity() << endl;
+    cout << "stepper_m first step: " << stepper_m->front() << endl;
+    cout << "stepper_m last step: " << stepper_m->back() << endl;
+
+
+}
+
 int main() {
-    test8();
+    test10();
     cout << "----------------------------------------" << endl;
     return 0;
 }

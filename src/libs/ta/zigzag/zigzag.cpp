@@ -1,6 +1,6 @@
 #include "zigzag.hpp"
-
 #include "../../trade/trade.hpp"
+#include "../frames/frames.hpp"
 
 
 Zig::Zig(size_t t, double p, bool h) {
@@ -9,6 +9,10 @@ Zig::Zig(size_t t, double p, bool h) {
     this->h = h;
 }
 
+std::ostream& operator<<(std::ostream& os, const Zig& zig) {
+    os << "Zig: t=" << zig.t << ", p=" << zig.p << ", h=" << (zig.h ? "true" : "false");
+    return os;
+}
 
 ZigZag::ZigZag(double delta, size_t retain_size) : boost::circular_buffer<Zig>(retain_size), d(delta), pubsub(PubSub::getInstance()) {
 }
@@ -17,6 +21,14 @@ ZigZag * ZigZag::subscribe_to_pubsub() {
     pubsub.subscribe("trade", [this](void* data) { 
         Trade* trade = static_cast<Trade*>(data);
         this->push(trade->t, trade->p);
+    });
+    return this;
+}
+
+ZigZag * ZigZag::subscribe_to_pubsub_frames_vwap(size_t miliseconds) {
+    pubsub.subscribe("frame_" + std::to_string(miliseconds), [this](void* data) { 
+        Frame* frame = static_cast<Frame*>(data);
+        this->push(frame->t, frame->vwap);
     });
     return this;
 }
