@@ -1,0 +1,158 @@
+#include <string>
+#include <iostream>
+#include <algorithm>
+#include <numeric>
+#include <fstream>
+#include "../../libs/utils/datetime_utils.hpp"
+#include "../../libs/trade/trade.hpp"
+#include "../../libs/utils/timer.hpp"
+#include "../../config.hpp"
+#include "../../libs/ta/logscale/logscale.hpp"
+#include "../../libs/core/pubsub/pubsub.hpp"
+#include "../../libs/market/market.hpp"
+#include "../../libs/ta/zigzag/zigzag.hpp"
+#include "../../libs/ta/stepper/stepper.hpp"
+#include "../../libs/trade/tradecache.hpp"
+#include "../../libs/ta/frames/frames.hpp"
+
+
+using namespace std;
+
+
+class Simulator {
+    private:
+        size_t start_ts = 0;
+        size_t end_ts = 1900000000000;
+
+    public:
+        string symbol;
+        utils::Timer timer;
+        PubSub& pubsub = PubSub::getInstance();
+        TradeCache * trade_cache = &TradeCache::getInstance();
+        Market * market1;
+        Frames * fh;
+        Frames * fm;
+        ZigZag * zigzag_vwap_h;
+        ZigZag * zigzag_vwap_m;
+        Stepper * stepper;
+        
+        size_t anal_point_count = 0;
+
+        double average_price_movement = 100000000000;
+
+        ofstream trade_file;
+        ofstream zigzag_vwap_h_file;
+        ofstream zigzag_vwap_m_file;
+        ofstream stepper_file;
+
+        Simulator(string symbol, size_t start_ts=0, size_t end_ts=1900000000000) {
+            this->start_ts = start_ts;
+            this->end_ts = end_ts;
+            pubsub.reset();
+            trade_cache->reset();
+            trade_cache->subscribe_to_pubsub();
+            
+
+            this->symbol = symbol;
+            this->market1 = (new Market("Market1"))->set_price_multiplier_to_handle_orders(0.0001)->set_commision(10)->subscribe_to_pubsub();
+            this->trade_cache = &TradeCache::getInstance();
+            this->fh = new Frames(1000, 3600000);
+            this->fm = new Frames(1000, 60000);
+            this->zigzag_vwap_h = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_h_append")->subscribe_to_pubsub_frames_vwap(3600000);
+            this->zigzag_vwap_m = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_m_append")->subscribe_to_pubsub_frames_vwap(60000);
+            this->stepper = (new Stepper(0.0001, 100))->set_publish_appends("stepper")->subscribe_to_pubsub();
+
+            pubsub.subscribe("stepper", [this](void* data) { if(this->fh->size() > 24) this->anal_point(); });
+
+            // open files for writing in binary mode
+            string trade_file_name = FILES_PATH + symbol + "_trades.bin";
+            string zigzag_vwap_h_file_name = FILES_PATH + symbol + "_zigzag_vwap_h.bin";
+            string zigzag_vwap_m_file_name = FILES_PATH + symbol + "_zigzag_vwap_m.bin";
+            string stepper_file_name = FILES_PATH + symbol + "_stepper.bin";
+            trade_file.open(trade_file_name, ios::out | ios::binary);
+            zigzag_vwap_h_file.open(zigzag_vwap_h_file_name, ios::out | ios::binary);
+            zigzag_vwap_m_file.open(zigzag_vwap_m_file_name, ios::out | ios::binary);
+            stepper_file.open(stepper_file_name, ios::out | ios::binary);
+
+            pubsub.subscribe("frame_60000", [this](void* data) {
+                if (this->fm->size() < 121) return;
+                double sum = 0;
+                for (auto it = this->fm->end() - 120; it != this->fm->end(); ++it) {
+                    sum += (abs(it->vwap - (it - 1)->vwap) / (it - 1)->vwap);
+                }
+                this->average_price_movement = sum / 120;
+                // cout << "Average price movement: " << this->average_price_movement << endl;
+                this->zigzag_vwap_m->d = this->average_price_movement * 3;
+                cout << "Average price movement: " << this->average_price_movement * 3 << endl;
+            });
+
+            pubsub.subscribe("trade", [this](void* data) {
+                Trade trade = *(Trade*)data;
+                this->trade_file.write((char*)&trade.t, sizeof(trade.t));
+                this->trade_file.write((char*)&trade.p, sizeof(trade.p));
+            });
+
+            pubsub.subscribe("zigzag_vwap_h_append", [this](void* data) {
+                if(this->zigzag_vwap_h->size() < 2) return;
+                Zig zig = *(this->zigzag_vwap_h->end() - 2);
+                this->zigzag_vwap_h_file.write((char*)&zig.t, sizeof(zig.t));
+                this->zigzag_vwap_h_file.write((char*)&zig.p, sizeof(zig.p));
+            });
+
+            pubsub.subscribe("zigzag_vwap_m_append", [this](void* data) {
+                if(this->zigzag_vwap_m->size() < 2) return;
+                Zig zig = *(this->zigzag_vwap_m->end() - 2);
+                this->zigzag_vwap_m_file.write((char*)&zig.t, sizeof(zig.t));
+                this->zigzag_vwap_m_file.write((char*)&zig.p, sizeof(zig.p));
+            });
+
+            pubsub.subscribe("stepper", [this](void* data) {
+                Step step = *(Step*)data;
+                this->stepper_file.write((char*)&step.t, sizeof(step.t));
+                this->stepper_file.write((char*)&step.p, sizeof(step.p));
+            });
+
+            pubsub.subscribe("trade_finished", [this](void* data) {
+                // close all files
+                this->trade_file.close();
+                this->zigzag_vwap_h_file.close();
+                this->zigzag_vwap_m_file.close();
+                this->stepper_file.close();
+            });
+
+        }
+
+        void run() {
+            TradeReader trade_reader(symbol);
+            trade_reader.pubsub_trades(start_ts, end_ts);
+            timer.checkpoint("Finished reading trades");
+            finish();
+        }
+
+        void finish() {
+            cout << "Anal point count: " << anal_point_count << endl;
+        }
+
+        void anal_point() {
+            anal_point_count++;
+
+        }
+
+};
+
+int main() {
+
+    // for (const auto &symbol : SYMBOLS) {
+    //     cout << "Symbol: " << symbol << endl;
+    //     Simulator simulator(symbol);
+    //     simulator.run();
+    //     cout << "-------------------------" << endl;
+    // }
+
+    Simulator simulator("adausdt", utils::get_timestamp("2025-03-10 00:00:00"), utils::get_timestamp("2025-03-11 02:00:00"));
+    simulator.run();
+
+    return 0;
+}
+
+
