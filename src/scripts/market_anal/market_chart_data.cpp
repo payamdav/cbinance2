@@ -14,6 +14,7 @@
 #include "../../libs/ta/stepper/stepper.hpp"
 #include "../../libs/trade/tradecache.hpp"
 #include "../../libs/ta/frames/frames.hpp"
+#include "../../libs/ta/volumebox/volumebox.hpp"
 
 
 using namespace std;
@@ -30,11 +31,13 @@ class Simulator {
         PubSub& pubsub = PubSub::getInstance();
         TradeCache * trade_cache = &TradeCache::getInstance();
         Market * market1;
+        Frames * fs;
         Frames * fh;
         Frames * fm;
         ZigZag * zigzag_vwap_h;
         ZigZag * zigzag_vwap_m;
         Stepper * stepper;
+        VBox * vbox;
         
         size_t anal_point_count = 0;
 
@@ -44,6 +47,7 @@ class Simulator {
         ofstream zigzag_vwap_h_file;
         ofstream zigzag_vwap_m_file;
         ofstream stepper_file;
+        ofstream vbox_file;
 
         Simulator(string symbol, size_t start_ts=0, size_t end_ts=1900000000000) {
             this->start_ts = start_ts;
@@ -56,11 +60,13 @@ class Simulator {
             this->symbol = symbol;
             this->market1 = (new Market("Market1"))->set_price_multiplier_to_handle_orders(0.0001)->set_commision(10)->subscribe_to_pubsub();
             this->trade_cache = &TradeCache::getInstance();
+            this->fs = new Frames(1000, 1000);
             this->fh = new Frames(1000, 3600000);
             this->fm = new Frames(1000, 60000);
             this->zigzag_vwap_h = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_h_append")->subscribe_to_pubsub_frames_vwap(3600000);
             this->zigzag_vwap_m = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_m_append")->subscribe_to_pubsub_frames_vwap(60000);
             this->stepper = (new Stepper(0.0001, 100))->set_publish_appends("stepper")->subscribe_to_pubsub();
+            this->vbox = (new VBox(this->fs, 100, 0.0010, 0.0010, "uniform"))->set_publish_appends("volumebox");
 
             pubsub.subscribe("stepper", [this](void* data) { if(this->fh->size() > 24) this->anal_point(); });
 
@@ -69,10 +75,12 @@ class Simulator {
             string zigzag_vwap_h_file_name = FILES_PATH + symbol + "_zigzag_vwap_h.bin";
             string zigzag_vwap_m_file_name = FILES_PATH + symbol + "_zigzag_vwap_m.bin";
             string stepper_file_name = FILES_PATH + symbol + "_stepper.bin";
+            string vbox_file_name = FILES_PATH + symbol + "_vbox.bin";
             trade_file.open(trade_file_name, ios::out | ios::binary);
             zigzag_vwap_h_file.open(zigzag_vwap_h_file_name, ios::out | ios::binary);
             zigzag_vwap_m_file.open(zigzag_vwap_m_file_name, ios::out | ios::binary);
             stepper_file.open(stepper_file_name, ios::out | ios::binary);
+            vbox_file.open(vbox_file_name, ios::out | ios::binary);
 
             pubsub.subscribe("frame_60000", [this](void* data) {
                 if (this->fm->size() < 121) return;
@@ -118,6 +126,13 @@ class Simulator {
                 this->zigzag_vwap_h_file.close();
                 this->zigzag_vwap_m_file.close();
                 this->stepper_file.close();
+            });
+
+            pubsub.subscribe("volumebox", [this](void* data) {
+                double value = *(double*)data;
+                size_t t = this->fs->back().t;
+                this->vbox_file.write((char*)&t, sizeof(t));
+                this->vbox_file.write((char*)&value, sizeof(value));
             });
 
         }

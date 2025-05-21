@@ -22,10 +22,11 @@ std::ostream& operator<<(std::ostream& os, const Frame& frame);
 class Frames : public boost::circular_buffer<Frame> {
     private:
         PubSub& pubsub = PubSub::getInstance();
-        size_t miliseconds;
         TradeCache& trade_cache = TradeCache::getInstance();
-
+        
     public:
+        size_t miliseconds;
+
         Frames(size_t size, size_t miliseconds);
         void new_slot();
 };
