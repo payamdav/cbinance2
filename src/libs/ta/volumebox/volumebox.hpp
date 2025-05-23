@@ -5,8 +5,16 @@
 #include <iostream>
 #include <string>
 
+class Vols {
+    public:
+        double v=0;
+        double vs=0;
+        double vb=0;
+        double vd=0;
+};
 
-class VBox : public boost::circular_buffer<double> {
+
+class VBox : public boost::circular_buffer<Vols> {
     private:
         PubSub& pubsub = PubSub::getInstance();
         Frames * frames;

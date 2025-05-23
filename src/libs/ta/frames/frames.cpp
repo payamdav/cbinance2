@@ -36,6 +36,11 @@ void Frames::new_slot() {
             if (it->p < frame.l) {
                 frame.l = it->p;
             }
+            if (it->is_buyer_maker) {
+                frame.vs += it->v;
+            } else {
+                frame.vb += it->v;
+            }
         }
         frame.vwap = frame.q / frame.v;
     }

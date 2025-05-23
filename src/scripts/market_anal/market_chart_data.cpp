@@ -60,13 +60,14 @@ class Simulator {
             this->symbol = symbol;
             this->market1 = (new Market("Market1"))->set_price_multiplier_to_handle_orders(0.0001)->set_commision(10)->subscribe_to_pubsub();
             this->trade_cache = &TradeCache::getInstance();
-            this->fs = new Frames(1000, 1000);
+            this->fs = new Frames(5000, 1000);
             this->fh = new Frames(1000, 3600000);
             this->fm = new Frames(1000, 60000);
             this->zigzag_vwap_h = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_h_append")->subscribe_to_pubsub_frames_vwap(3600000);
             this->zigzag_vwap_m = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_m_append")->subscribe_to_pubsub_frames_vwap(60000);
             this->stepper = (new Stepper(0.0001, 100))->set_publish_appends("stepper")->subscribe_to_pubsub();
-            this->vbox = (new VBox(this->fs, 100, 0.0010, 0.0010, "uniform"))->set_publish_appends("volumebox");
+            // this->vbox = (new VBox(this->fs, 3600, 0.0200, 0.0200, "uniform"))->set_publish_appends("volumebox");
+            this->vbox = (new VBox(this->fs, 3600, 0.0200, 0.0200, "ramp"))->set_publish_appends("volumebox");
 
             pubsub.subscribe("stepper", [this](void* data) { if(this->fh->size() > 24) this->anal_point(); });
 
@@ -91,7 +92,7 @@ class Simulator {
                 this->average_price_movement = sum / 120;
                 // cout << "Average price movement: " << this->average_price_movement << endl;
                 this->zigzag_vwap_m->d = this->average_price_movement * 3;
-                cout << "Average price movement: " << this->average_price_movement * 3 << endl;
+                // cout << "Average price movement: " << this->average_price_movement * 3 << endl;
             });
 
             pubsub.subscribe("trade", [this](void* data) {
@@ -129,10 +130,13 @@ class Simulator {
             });
 
             pubsub.subscribe("volumebox", [this](void* data) {
-                double value = *(double*)data;
+                Vols vols = *(Vols*)data;
                 size_t t = this->fs->back().t;
                 this->vbox_file.write((char*)&t, sizeof(t));
-                this->vbox_file.write((char*)&value, sizeof(value));
+                this->vbox_file.write((char*)&vols.v, sizeof(vols.v));
+                this->vbox_file.write((char*)&vols.vs, sizeof(vols.vs));
+                this->vbox_file.write((char*)&vols.vb, sizeof(vols.vb));
+                this->vbox_file.write((char*)&vols.vd, sizeof(vols.vd));
             });
 
         }

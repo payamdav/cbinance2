@@ -14,6 +14,8 @@ class Frame {
         double vwap=0;
         size_t n=0;
         double v=0;
+        double vs=0;
+        double vb=0;
         double q=0;
 };
 
