@@ -38,6 +38,8 @@ class Simulator {
         ZigZag * zigzag_vwap_m;
         Stepper * stepper;
         VBox * vbox;
+        VBox * vbox2;
+
         
         size_t anal_point_count = 0;
 
@@ -48,6 +50,7 @@ class Simulator {
         ofstream zigzag_vwap_m_file;
         ofstream stepper_file;
         ofstream vbox_file;
+        ofstream vbox2_file;
 
         Simulator(string symbol, size_t start_ts=0, size_t end_ts=1900000000000) {
             this->start_ts = start_ts;
@@ -67,7 +70,11 @@ class Simulator {
             this->zigzag_vwap_m = (new ZigZag(0.01, 100))->set_publish_appends("zigzag_vwap_m_append")->subscribe_to_pubsub_frames_vwap(60000);
             this->stepper = (new Stepper(0.0001, 100))->set_publish_appends("stepper")->subscribe_to_pubsub();
             // this->vbox = (new VBox(this->fs, 3600, 0.0200, 0.0200, "uniform"))->set_publish_appends("volumebox");
-            this->vbox = (new VBox(this->fs, 3600, 0.0200, 0.0200, "ramp"))->set_publish_appends("volumebox");
+            // this->vbox = (new VBox(this->fs, 600, 0.0020, 0.0020, "ramp"))->set_publish_appends("volumebox");
+            // this->vbox2 = (new VBox(this->fs, 1800, 0.0020, 0.0020, "ramp"))->set_publish_appends("volumebox2");
+
+            this->vbox = (new VBox(this->fs, 600, 0.0005, 0.0005, "ramp"))->set_publish_appends("volumebox");
+            this->vbox2 = (new VBox(this->fs, 3600, 0.0020, 0.0020, "ramp"))->set_publish_appends("volumebox2");
 
             pubsub.subscribe("stepper", [this](void* data) { if(this->fh->size() > 24) this->anal_point(); });
 
@@ -77,11 +84,13 @@ class Simulator {
             string zigzag_vwap_m_file_name = FILES_PATH + symbol + "_zigzag_vwap_m.bin";
             string stepper_file_name = FILES_PATH + symbol + "_stepper.bin";
             string vbox_file_name = FILES_PATH + symbol + "_vbox.bin";
+            string vbox2_file_name = FILES_PATH + symbol + "_vbox2.bin";
             trade_file.open(trade_file_name, ios::out | ios::binary);
             zigzag_vwap_h_file.open(zigzag_vwap_h_file_name, ios::out | ios::binary);
             zigzag_vwap_m_file.open(zigzag_vwap_m_file_name, ios::out | ios::binary);
             stepper_file.open(stepper_file_name, ios::out | ios::binary);
             vbox_file.open(vbox_file_name, ios::out | ios::binary);
+            vbox2_file.open(vbox2_file_name, ios::out | ios::binary);
 
             pubsub.subscribe("frame_60000", [this](void* data) {
                 if (this->fm->size() < 121) return;
@@ -139,6 +148,16 @@ class Simulator {
                 this->vbox_file.write((char*)&vols.vd, sizeof(vols.vd));
             });
 
+            pubsub.subscribe("volumebox2", [this](void* data) {
+                Vols vols = *(Vols*)data;
+                size_t t = this->fs->back().t;
+                this->vbox2_file.write((char*)&t, sizeof(t));
+                this->vbox2_file.write((char*)&vols.v, sizeof(vols.v));
+                this->vbox2_file.write((char*)&vols.vs, sizeof(vols.vs));
+                this->vbox2_file.write((char*)&vols.vb, sizeof(vols.vb));
+                this->vbox2_file.write((char*)&vols.vd, sizeof(vols.vd));
+            });
+
         }
 
         void run() {
@@ -168,7 +187,7 @@ int main() {
     //     cout << "-------------------------" << endl;
     // }
 
-    Simulator simulator("adausdt", utils::get_timestamp("2025-03-10 00:00:00"), utils::get_timestamp("2025-03-11 02:00:00"));
+    Simulator simulator("adausdt", utils::get_timestamp("2025-03-12 00:00:00"), utils::get_timestamp("2025-03-13 02:00:00"));
     simulator.run();
 
     return 0;
